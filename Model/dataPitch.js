@@ -2,13 +2,12 @@ const mongoose = require('mongoose')
 
 const dataPitch =new mongoose.Schema(
    {
-    dateTime:{type: String},
-    pitchName:{ type: String},
-    idPitch:{type: String, required: true},
-    code:{ type: String, required: true,},
-    typePitch:{ type: String},
-    footballPitch:{type : Array , "default" : []},
-    total:{ type: String}
+      pitchName:{ type: String,required: true},
+      pitchId:{type: String, required: true},
+      dateTime:{type: String,required: true},
+      pitchType:{ type: String,required: true},
+      footballPitch:{type : Array , "default" : []},
+      //total:{ type: String}
    },
    {collection:'dataPitch'}
 )

@@ -1,9 +1,11 @@
 const express = require("express");
+const multer = require('multer');
+const fs = require('fs');
 const path = require("path");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const User = require("./model/user");
-const Cable = require("./model/cable");
+const FindAwayTeam = require("./Model/findAwayTeam");
 const dataPitch = require("./model/dataPitch");
 const CustomerDetail = require("./model/bookFootball");
 const FootballPitch = require("./model/footballPitch");
@@ -12,6 +14,7 @@ const auth = require("./Middleware/auth");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 var cors = require("cors");
+require("dotenv").config();
 const date = require("date-and-time");
 const JWT_SECRET =
   "sdjkfh8923yhjdksbfma@#*(&@*!^#&@bhjb2qiuhesdbhjdsfg839ujkdhfjk";
@@ -25,23 +28,32 @@ mongoose.connect("mongodb://localhost:27017/MyDB", {
   useUnifiedTopology: true,
   //useCreateIndex: true
 });
-
+const storage= multer.diskStorage({
+  destination: "Images",
+  filename: (req, file, cb)=>{
+    console.log('image---', Date.now() + path.extname(file.originalname));
+    cb(null,Date.now() + path.extname(file.originalname));
+  }
+});
+const upload= multer({storage: storage}).single('image');
+const uploadMultiple= multer({storage: storage}).array('imgArray', 5);
 const app = express();
 app.use(cors());
-
+app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
 app.use("/", express.static(path.join(__dirname, "static")));
 app.use(bodyParser.json());
-
+const keyrefshe= 'dasdasdasdasd'
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
   console.log("user---" + username);
   const user = await User.findOne({ username }).lean();
 
   if (!user) {
-    return res.json({ status: 404, error: "Không tồn tại tài khoản !" });
+    //return res.json({ status: 404, error: "Không tồn tại tài khoản !" });
+    return res.status(401).send({error: 'Không tồn tại tài khoản !'})
     //return res.status(404).json({error:'khong ton tai tk'})
   }
-
+ 
   if (await bcrypt.compare(password, user.password)) {
     // the username, password combination is successful
     const isAdmin = user.isAdmin;
@@ -52,22 +64,34 @@ app.post("/api/login", async (req, res) => {
       },
       JWT_SECRET
     );
-
+    const _refeshtoken = jwt.sign(
+      {
+        id: user._id,
+        username: user.username,
+      },
+      //config._refeshtoken
+      keyrefshe
+    );
+    //const HOUR = new Date() + (60 * 60 * 1000)
+  
     return res.json({
-      status: "ok",
-      token: _token,
-      isAdmin: isAdmin,
-      username: user.username,
+      access_token: _token,
+      expires_in: 3600 * 1000,
+      refresh_expires_in: 3600 * 1000,
+      refresh_token: _refeshtoken,
+      //isAdmin: isAdmin,
+      token_type:"Bearer",
+      //username: user.username,
     });
     //return res.status(200).send(({token:_token}))
   }
 
-  //return res.status(401).send(({message:"Invalid username/password"}))
+  return res.status(401).send(({error:"Tài khoản hoặc mật khẩu không chính xác !"}))
   //return res.send({error:404,message:"loi dang nhao roi"})
-  return res.json({
-    status: 401,
-    error: "Tài khoản hoặc mật khẩu không chính xác !",
-  });
+  // return res.json({
+  //   status: 401,
+  //   error: "Tài khoản hoặc mật khẩu không chính xác !",
+  // });
 });
 
 app.post("/api/register", async (req, res) => {
@@ -102,9 +126,9 @@ app.post("/api/register", async (req, res) => {
   const now = new Date();
   let createAt = date.format(now, "YYYY/MM/DD HH:mm:ss");
   //var createAt=dateFormat(new Date(), "yyyy-mm-dd h:MM:ss");
-  const fullName = "hi";
+  const fullName = "Your Name";
   const isAdmin = "0";
-  const phoneNumber = " ";
+  const phoneNumber = null;
   const password = await bcrypt.hash(plainTextPassword, 10);
   const _token = jwt.sign(
     {
@@ -138,72 +162,69 @@ app.post("/api/register", async (req, res) => {
     username: username,
   });
 });
-app.get("/users/me", async (req, res) => {
+app.get("/users/me", auth, async (req, res) => {
   // View logged in user profile
   //console.log(req.createAt)
   //const data = jwt.verify(token, process.env.JWT_SECRET)
-  const token = req.header("Authorization").replace("Bearer ", "");
-  const data = jwt.verify(token, JWT_SECRET);
-  //console.log(data.email)
-  try {
-    const user = await User.findOne({ _id: data.id }).lean();
-    res.send(user);
+  // console.log('-----', auth().)
+  
+  // const token = req.header("Authorization").replace("Bearer ", "");
+  // const data = jwt.verify(token, JWT_SECRET);
+  // //console.log(data.email)
+  // try {
+  //   const user = await User.findOne({ _id: data.id }).lean();
+  //   res.send(user);
 
-    //req.user=user
-  } catch (e) {
-    console.log(e);
-  }
+  //   //req.user=user
+  // } catch (e) {
+  //   console.log(e);
+  // }
+  console.log('----', req.user);
+   res.send(req.user);
 });
 
-app.post("/api/change-fullname", async (req, res) => {
+app.post("/api/change-fullname",auth, async (req, res) => {
   const { fullName } = req.body;
-  console.log(fullName);
-  const token = req.header("Authorization").replace("Bearer ", "");
-  const data = jwt.verify(token, JWT_SECRET);
-  //const _id=data.id
+  const id =req.user._id;
+  console.log(id);
   if (!fullName || typeof fullName !== "string") {
     return res.json({ status: "error", error: "Invalid password" });
   }
   if (fullName.length < 5) {
-    return res.json({
-      status: "error",
-      error: "Tên phải dài hơn",
+    return res.status(400).json({
+      message: "Tên phải dài hơn",
     });
   }
   try {
     await User.updateOne(
-      { _id: data.id },
+      { _id: id },
       {
         $set: { fullName: fullName },
       }
     );
-    res.json({ status: "ok", FullNameUser: fullName });
+    res.status(200).json({ status: "ok" });
+
   } catch (e) {
     console.log(e);
   }
 });
-app.post("/api/change-phoneNumber", async (req, res) => {
+app.post("/api/change-phoneNumber",auth, async (req, res) => {
   const { phoneNumber } = req.body;
   console.log(phoneNumber);
-  const token = req.header("Authorization").replace("Bearer ", "");
-  const data = jwt.verify(token, JWT_SECRET);
-  //const _id=data.id
-  console.log("55", data.id);
-
+  const id =req.user._id;
   if (phoneNumber.length < 10 || phoneNumber.length > 11) {
-    return res.json({
-      status: "error",
-      error: "So dien thoai chua dung",
+    return res.status(400).json({
+      message: "Số điện thoai chưa đúng định dạng!!",
     });
   }
   try {
     await User.updateOne(
-      { _id: data.id },
+      { _id: id},
       {
         $set: { phoneNumber: phoneNumber },
       }
     );
-    res.json({ status: "ok", PhoneNumbers: phoneNumber });
+    res.status(200).json({ status: "ok" });
   } catch (e) {
     console.log(e);
   }
@@ -293,13 +314,9 @@ app.post("/api/book-football-pitch", async (req, res) => {
 
 // API FETCH FORM DATA PITCH EVERY DAY
 
-app.post("/api/data-pitch-update", async (req, res) => {
-  const code = req.query.code;
-  const id = req.query.id;
-  const idSlot = req.query.idSlot;
-  console.log("code---a ", code);
-  console.log("id---a ", id);
-  console.log("id---a ", idSlot);
+app.post("/api/football-booking", async (req, res) => {
+  const id = req.body.id;// id cua ngay dat
+  const idSlot = req.body.idSlot;
   try {
     await dataPitch.updateOne(
       { _id: id, "footballPitch.id": idSlot },
@@ -319,104 +336,102 @@ app.post("/api/data-pitch-update", async (req, res) => {
 });
 // API UPDATE FORM DATA PITCH EVERY DAY
 
-app.post("/api/data-pitch", async (req, res) => {
-  const code = req.query.code;
-  const typePitch =req.query.typePitch;
-  const idPitch = req.query.idPitch;
-
-  const dateTime =req.query.dateTime;
-  pitchName =req.query.pitchName;
-  console.log('code----',code);
-  console.log('typePitch----',typePitch);
-  console.log('idPitch----',idPitch);
+app.post("/api/football-pitch-time-list", auth, async (req, res) => {
+  const pitchType =req.body.pitchType;
+  const dateTime =req.body.dateTime;
+  const pitchName =req.body.pitchName;
+  const pitchId =req.body.pitchId;
+  console.log('pitchType----',pitchType);
   console.log('dateTime----',dateTime);
   console.log('pitchName----',pitchName);
-
+  if(!pitchId||!pitchType || !dateTime || !pitchName) {
+    return res.status(401).json({message:" error api get list footbal"});
+  }
   footballPitch=[
     {
         id:"1",
         timeSlot:"06:00-07:00",
-        timeStart:"6",
-        timeEnd:"7",
+        timeStart:6,
+        timeEnd:7,
         price:"500.000",
         status:"pending"
     },
     {
         id:"2",
         timeSlot:"07:00-08:00",
-        timeStart:"7",
-        timeEnd:"8",
+        timeStart:7,
+        timeEnd:8,
         price:"500.000",
         status:"pending"
     },
     {
         id:"3",
         timeSlot:"08:00-09:00",
-        timeStart:"8",
-        timeEnd:"9",
+        timeStart:8,
+        timeEnd:9,
         price:"500.000",
         status:"pending"
     },
     {
         id:"4",
         timeSlot:"09:00-10:00",
-        timeStart:"9",
-        timeEnd:"10",
+        timeStart:9,
+        timeEnd:10,
         price:"500.000",
         status:"pending"
     },
     {
         id:"5",
         timeSlot:"10:00-11:30",
-        timeStart:"10",
-        timeEnd:"12",
+        timeStart:10,
+        timeEnd:12,
         price:"500.000",
         status:"pending"
     },
     {
         id:"6",
         timeSlot:"15:00-16:00",
-        timeStart:"15",
-        timeEnd:"16",
+        timeStart:15,
+        timeEnd:16,
         price:"500.000",
         status:"pending"
     },
     {
         id:"7",
         timeSlot:"16:00-17:00",
-        timeStart:"16",
-        timeEnd:"17",
+        timeStart:16,
+        timeEnd:17,
         price:"500.000",
         status:"pending"
     },
     {
         id:"8",
         timeSlot:"17:00-18:00",
-        timeStart:"17",
-        timeEnd:"18",
+        timeStart:17,
+        timeEnd:18,
         price:"500.000",
         status:"pending"
     },
     {
         id:"9",
         timeSlot:"18:00-19:00",
-        timeStart:"18",
-        timeEnd:"19",
+        timeStart:18,
+        timeEnd:19,
         price:"500.000",
         status:"pending"
     },
     {
         id:"10",
         timeSlot:"19:00-20:00",
-        timeStart:"19",
-        timeEnd:"20",
+        timeStart:19,
+        timeEnd:20,
         price:"500.000",
         status:"pending"
     },
      {
         id:"11",
         timeSlot:"20:00-21:00",
-        timeStart:"20",
+        timeStart:20,
         timeEnd:21,
         price:"500.000",
         status:"pending"
@@ -424,46 +439,153 @@ app.post("/api/data-pitch", async (req, res) => {
      {
         id:"12",
         timeSlot:"21:00-23:00",
-        timeStart:"21",
-        timeEnd:"23",
+        timeStart:21,
+        timeEnd:23,
         price:"500.000",
         status:"pending"
     },           
    
 ]
 
-  console.log("code" + code);
   try {
-    const obj = await dataPitch
-      .findOne({ idPitch: idPitch,code: code ,typePitch:typePitch }).lean();
-
-    console.log('dsad===',obj)
-
-    if(obj !==null){
-      console.log('aaaaa')
-      res.json(obj);
+    const data = await dataPitch.findOne({pitchName:pitchName, pitchType:pitchType, dateTime: dateTime });
+    if(data!==null){
+      res.status(200).json(data);
     }
-    if(obj===null){
-      console.log('bbbb')
-      const newDay =await dataPitch.create({
-        dateTime,
+    else{
+      console.log('vaoday lam gi', data);
+      const newData =await dataPitch.create({
         pitchName,
-        idPitch,
-        code,
-        typePitch,
+        pitchId,
+        dateTime,
+        pitchType,
         footballPitch
       })
-     // newDay.save();
-      res.json(newDay)
-    }
+      newData.save();
+    res.status(200).json(newData);
+      }
+
   } catch (error) {
-    console.log(error);
+    console.log('err',error)
+  }
+
+});
+// create-pitch
+app.post("/api/create-pitch", auth, async (req, res) => {
+  try{
+  await FootballPitch.create({});
+  res.status(200).json({message:'success'})
+  }catch(error){
+    return res.json({'error' : error})
   }
 });
+// add-pitch
+app.post("/football/add-pitch",auth, async (req, res) => {
+  const { pitchName, code, openTime, closeTime, location, minPrice,maxPrice, title, content, imgArray,latitude, longitude  } = req.query;
+  console.log('nn', pitchName);
+  // console.log('mm', req.query);
+  // if(!pitchName){
+  //   return res.status(400).json({error:"pitchname is not Required"});
+  // }
+  // uploadMultiple(req, res, async(err)=>{
+          
+  //          console.log('arr----', req.files);
+  //         })
+  // upload(req, res, async(err)=>{
+  //   console.log('tenfile', req);
+  //   const avataName=req.file.filename;
+  //   const file = fs.readFileSync('/Users/macmini/Documents/API/Images/'+req.file.filename);
+  //   if(err){
+  //     console.log(err);
+  //   }
+  // })
+    uploadMultiple(req, res, async(error)=>{
+      console.log('files----', req)
+      if(error){
+        console.log(error);
+      }
+    })
 
-// FOOTBALL PITCH
-app.get("/api/football-pitch-ad", async (req, res) => {
-  const id = "62a4150279efdb406016967b";
+    try {
+      const image='';
+    
+      //   const image= {
+      //     name: avataName,
+      //     data: file,
+      //     contentType: 'image/png'
+      //  }
+       console.log(image)
+       const response = await FootballPitch.updateOne({
+             $push:{
+               pitchs:[
+                 {
+                   pitchName,
+                   code,
+                   openTime,
+                   closeTime,
+                   location,
+                   minPrice,
+                   maxPrice,
+                   image,
+                   title,
+                   content,
+                   imgArray,
+                   latitude,
+                   longitude 
+                 }
+               ]
+             }
+           })
+           return  res.status(200).json({message:'success', image:image.image})
+   } catch (err) {
+    console.error(err);
+    return res.status(400).json({err: err})
+   }
+
+  // try{
+   
+  //   const a = await FootballPitch.create({
+  //      image:'1111'
+  //   })
+  //   return  res.status(200).json({message:'success', data: a})
+    // console.log('a1234')
+    // const data = fs.readFile('Images/',res.file.filename,  'utf8');
+    // console.log('ccc------', data);
+    // const image={
+    //   data: data,
+    //   contentType:'image/png'
+    // };
+  //  const response = await FootballPitch.updateOne({
+  //     $push:{
+  //       pitchs:[
+  //         {
+  //           pitchName,
+  //           code,
+  //           openTime,
+  //           closeTime,
+  //           location,
+  //           minPrice,
+  //           maxPrice,
+  //           image,
+  //           title,
+  //           content,
+  //           imgArray,
+  //           latitude,
+  //           longitude 
+  //         }
+  //       ]
+  //     }
+  //   })
+  //  return  res.status(200).json({message:'success'})
+  // }catch(error){
+  //   return res.json({'error' : error})
+  // }
+ 
+
+});
+// get pitch football list
+app.get("/api/pitch-list",auth, async (req, res) => {
+  const id = "632190052ac9c5dcdf8f3370";
   try {
     const data = await FootballPitch.findOne({ _id: id }).lean();
     res.json(data);
@@ -473,118 +595,136 @@ app.get("/api/football-pitch-ad", async (req, res) => {
 });
 
 ////get INFO
-app.get("/api/football-detail", async (req, res) => {
+app.get("/api/pitch-detail",auth, async (req, res) => {
   const code = req.query.code;
   try {
-    const info = await footballPitchDetail.findOne({ code_name: code }).lean();
+    const info = await footballPitchDetail.findOne({ code: code }).lean();
     res.json(info);
   } catch (error) {
     console.log(error);
   }
 });
 //Cable create
-app.post("/api/create-cable", async (req, res) => {
+app.post("/football/init-teams",auth, async (req, res) => {
   try {
-    const response = await Cable.create({
+    const response = await FindAwayTeam.create({
       $push: {
         data: [],
       },
     });
     response.save();
-    // http://localhost:3000/api/book-football-pitch
-    console.log("Thanh Cong", response);
+    console.log("Successfully init-teams", response);
   } catch (error) {
-    console.log("loi roi", error);
+    console.log("error init-teams", error);
+    res.status(401).json({error:error});
   }
-  res.json({ status: "ok" });
+  res.status(200).json({message:'Successfully init-teams'});
 });
 
-app.post("/api/add-cable", async (req, res) => {
+app.post("/football/create-teams", async (req, res) => {
   const {
-    namePitch,
+    pitchName,
     location,
     timeSlot,
     dateTime,
     dateTimeHH,
-    price,
+    pitchPrice,
     team,
     contact,
     phoneNumber,
     message,
-    username,
+    userName,
   } = req.body;
-
-  console.log("4444", username);
-  const team2 = "";
+  if(!pitchName || !location||!timeSlot||!dateTime||!dateTimeHH||!pitchPrice||!team||!contact||!phoneNumber||!message||!userName){
+      res.status(400).json({error:"Error fields"});
+  }
+  const teamName2 = "";
   const phoneNumber2 = "";
   const message2 = "";
   const isStatus = "open";
   try {
-    const response = await Cable.updateMany({
+    const response = await FindAwayTeam.updateMany({
       $push: {
         data: {
-          namePitch,
+          pitchName,
           location,
           timeSlot,
           dateTime,
           dateTimeHH,
-          price,
+          pitchPrice,
           team,
           contact,
           phoneNumber,
           message,
-          team2,
+          teamName2,
           phoneNumber2,
           message2,
           isStatus,
-          username,
+          userName,
         },
       },
     });
-    res.json({ status: "ok" });
-    // http://localhost:3000/api/book-football-pitch
-    //	console.log("Thanh Cong",response)
+    res.status(200).json({ message: "Successfully Create-teams" });
   } catch (error) {
-    console.log("loi roi", error);
+    console.log("error create-teams", error);
+    res.status(400).json({error:error});
   }
 });
 
-app.post("/api/update-cable", async (req, res) => {
-  const id = req.query.id;
-  const status = req.query.status;
-  const nameTeam = req.query.nameTeam;
-  const message = req.query.message;
+app.post("/football/update-team-list", async (req, res) => {
+  const {id, teamName2,message2,status}=req.body;
   console.log("id----", id);
-  console.log("id----", nameTeam);
+  console.log("id----", teamName2);
   console.log("id----", status);
-  const idParent = "62965a48b1310e75cc04a5a8";
-
+  const idParent = "630c22e49ac5455fd7be3d84";
+  if(!teamName2){
+    res.status(400).json({error:"missing field"})
+  }
   try {
-    const response = await Cable.updateOne(
+    const response = await FindAwayTeam.updateOne(
       { _id: idParent, "data._id": id },
       {
         $set: {
           "data.$.isStatus": status,
-          "data.$.team2": nameTeam,
-          "data.$.message2": message,
+          "data.$.teamName2": teamName2,
+          "data.$.message2": message2,
         },
       }
     );
-    res.json({ status: "ok" });
+    res.status(200).json({ message: "ok" });
     console.log(response);
   } catch (error) {
     console.log(error);
-    res.json({ status: "error", error: error });
+    res.status(400).json({ status: "error", error: error });
+  }
+});
+app.post("/football/update-team-list-request", async (req, res) => {
+  const {id, status}=req.body;
+  console.log("id----", status);
+  const idParent = "630c22e49ac5455fd7be3d84";
+
+  try {
+    const response = await FindAwayTeam.updateOne(
+      { _id: idParent, "data._id": id },
+      {
+        $set: {
+          "data.$.isStatus": status,
+        },
+      }
+    );
+    res.status(200).json({ message: "ok" });
+    console.log(response);
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ status: "error", error: error });
   }
 });
 //cable getList
-app.get("/api/get-cableList", async (req, res) => {
-  const id = "62965a48b1310e75cc04a5a8";
+app.get("/football/team-list",auth, async (req, res) => {
+  const id = "630c22e49ac5455fd7be3d84";
 
   try {
-    const info = await Cable.findOne({ _id: id }).lean();
-  
-    //  const data = await CustomerDetail.find({ username: username }).lean();
+    const info = await FindAwayTeam.findOne({ _id: id }).lean();
     const dataFilter = _.filter(info.data, (o) => {
       const today = moment().format("DD/MM/YYYY HH ");
       let isAfter = moment(o.dateTimeHH, "DD/MM/YYYY HH ").isSameOrAfter(
@@ -606,23 +746,20 @@ app.get("/api/get-cableList", async (req, res) => {
       }
     });
     console.log(dataFilter);
-    //const size =_.size(data)
-    //	const size= {$size: data.length}
-  res.json({ size: dataFilter.length, dataFilter });
-    // console.log("Thanh Cong99",data,{ size: size})
+  res.status(200).json({ size: dataFilter.length, dataFilter });
   } catch (error) {
-    console.log(error);
+    console.log(error,'error ---- get list team ----');
+    res.status(400).json({error:error});
   }
 });
-////customerDetail
-app.post("/api/customer-detail", async (req, res) => {
+////customerDetail----Bill
+app.post("/football/create-bill",auth, async (req, res) => {
   //const token = req.header('Authorization').replace('Bearer ','')
   //const data =  jwt.verify(token, JWT_SECRET)
-
   const {
-    namePitch,
+    pitchName,
     timeSlot,
-    timeBooking,
+    timeBookingDateTime,
     date,
     customerName,
     numberPhone,
@@ -631,12 +768,13 @@ app.post("/api/customer-detail", async (req, res) => {
     dataService,
     location,
     total,
-    username,
+    userName,
   } = req.body;
-
+  const timeBooking=timeBookingDateTime;
+  console.log('aaaaa----', pitchName);
   try {
     const response = await CustomerDetail.create({
-      namePitch,
+      pitchName,
       timeSlot,
       timeBooking,
       date,
@@ -647,7 +785,7 @@ app.post("/api/customer-detail", async (req, res) => {
       dataService,
       location,
       total,
-      username,
+      userName,
     });
     response.save();
     // http://localhost:3000/api/book-football-pitch
@@ -658,29 +796,29 @@ app.post("/api/customer-detail", async (req, res) => {
   res.json({ status: "ok" });
 });
 
-app.post("/api/GETcustomer-detail", async (req, res) => {
-  const { username } = req.body;
+app.post("/football/customer-order",auth, async (req, res) => {
+  const username  = req.query.username;
   console.log("user--", username);
   try {
     dates;
     const data = await CustomerDetail.find({ username: username }).lean();
-    const dataFilter = _.filter(data, (o) => {
-      const today = moment().format("DD/MM/YYYY HH");
-      let isAfter = moment(o.timeBooking, "DD/MM/YYYY ").isSameOrAfter(
-        moment(today, "DD/MM/YYYY ")
-      );
-      if (isAfter) {
-        // const diff = moment(o.timeBooking, "DD/MM/YYYY ").diff(moment());
-        // if (diff >= 6) {
-        //   return o;
-        // }
-        return o;
-      }
-    });
-    console.log(dataFilter);
+    // const dataFilter = _.filter(data, (o) => {
+    //   const today = moment().format("DD/MM/YYYY HH");
+    //   let isAfter = moment(o.timeBooking, "DD/MM/YYYY ").isSameOrAfter(
+    //     moment(today, "DD/MM/YYYY ")
+    //   );
+    //   if (isAfter) {
+    //     // const diff = moment(o.timeBooking, "DD/MM/YYYY ").diff(moment());
+    //     // if (diff >= 6) {
+    //     //   return o;
+    //     // }
+    //     return o;
+    //   }
+    // });
+    console.log(data);
     //const size =_.size(data)
     //	const size= {$size: data.length}
-    res.json({ size: dataFilter.length, dataFilter });
+    res.json({ size: data.length, data });
     // console.log("Thanh Cong99",data,{ size: size})
   } catch (error) {
     console.log(error);
@@ -756,8 +894,34 @@ app.post("/api/data-pitch-update-reset", async (req, res) => {
   }
 });
 ///-----------------------------------------------------------------------------------------------------------------------------------
+const stripe = require("stripe")(process.env.STRIPE_SECRET_TEST);
+// This example sets up an endpoint using the Express framework.
+// Watch this video to get started: https://youtu.be/rPR2aJ6XnAc.
 
-app.listen(3000 || 4000, () => {
+app.post('/checkout', async (req, res) => {
+  // Use an existing Customer ID if this is a returning customer.
+  const customer = await stripe.customers.create();
+  const ephemeralKey = await stripe.ephemeralKeys.create(
+    {customer: customer.id},
+    {apiVersion: '2020-08-27'}
+  );
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: 1099,
+    currency: 'eur',
+    customer: customer.id,
+    automatic_payment_methods: {
+      enabled: true,
+    },
+  });
+
+  res.json({
+    paymentIntent: paymentIntent.client_secret,
+    ephemeralKey: ephemeralKey.secret,
+    customer: customer.id,
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY
+  });
+});
+app.listen(3000, () => {
   console.log("Server up at 3000");
 });
 dates;
