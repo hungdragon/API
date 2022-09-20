@@ -182,6 +182,11 @@ app.get("/users/me", auth, async (req, res) => {
   console.log('----', req.user);
    res.send(req.user);
 });
+app.get("/demo", async (req, res) => {
+ 
+  
+   res.send({data:'aaaaa'});
+});
 
 app.post("/api/change-fullname",auth, async (req, res) => {
   const { fullName } = req.body;
