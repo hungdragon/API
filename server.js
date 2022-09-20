@@ -185,7 +185,9 @@ app.get("/users/me", auth, async (req, res) => {
 app.get("/demo", async (req, res) => {
  
   
-   res.send({data:'aaaaa'});
+  return res.status(200).json({
+    message: "Tên phải dài hơn",
+  });
 });
 
 app.post("/api/change-fullname",auth, async (req, res) => {
