@@ -874,7 +874,8 @@ app.post('/checkout', async (req, res) => {
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY
   });
 });
-app.listen(3000, () => {
+const PORT = process.env.PORT || 3000
+app.listen(PORT, () => {
   console.log("Server up at 3000");
 });
 dates;
