@@ -674,7 +674,7 @@ app.post("/football/update-team-list-request", async (req, res) => {
 });
 //cable getList
 app.get("/football/team-list",auth, async (req, res) => {
-  const id = "630c22e49ac5455fd7be3d84";
+  const id = "632bd900e351f6edf5f90773";
 
   try {
     const info = await FindAwayTeam.findOne({ _id: id }).lean();
