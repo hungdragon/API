@@ -23,7 +23,7 @@ var moment = require("moment");
 var dates = require("date-fns");
 moment.locale("vi");
 const { boolean } = require("webidl-conversions");
-mongoose.connect("mongodb://localhost:27017/MyDB", {
+mongoose.connect("mongodb+srv://hungvv:Hanoi1999@cluster0.2wq4vod.mongodb.net/test", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   //useCreateIndex: true
@@ -488,111 +488,60 @@ app.post("/api/create-pitch", auth, async (req, res) => {
 });
 // add-pitch
 app.post("/football/add-pitch",auth, async (req, res) => {
-  const { pitchName, code, openTime, closeTime, location, minPrice,maxPrice, title, content, imgArray,latitude, longitude  } = req.query;
-  console.log('nn', pitchName);
-  // console.log('mm', req.query);
-  // if(!pitchName){
-  //   return res.status(400).json({error:"pitchname is not Required"});
-  // }
-  // uploadMultiple(req, res, async(err)=>{
-          
-  //          console.log('arr----', req.files);
-  //         })
-  // upload(req, res, async(err)=>{
-  //   console.log('tenfile', req);
-  //   const avataName=req.file.filename;
-  //   const file = fs.readFileSync('/Users/macmini/Documents/API/Images/'+req.file.filename);
-  //   if(err){
-  //     console.log(err);
-  //   }
-  // })
-    uploadMultiple(req, res, async(error)=>{
-      console.log('files----', req)
+  const { pitchName, code, openTime, closeTime, location, minPrice,maxPrice, content, imgArray,latitude, longitude  } = req.query;
+  const title= 'Thông tin sân'
+  uploadMultiple(req, res, async(error)=>{
       if(error){
         console.log(error);
+      }else{
+        try {
+          const data =req.files;
+          const lastData=data[data.length-1];
+          console.log('mmmm---', lastData);
+            const image= {
+              name: lastData.filename,
+              data: fs.readFileSync('/Users/macmini/Documents/API/Images/'+lastData.filename),
+              contentType: 'image/png'
+           }
+           const imgArray =data.map(i=>({
+              name: i.filename,
+              data: fs.readFileSync('/Users/macmini/Documents/API/Images/'+i.filename),
+              contentType: 'image/png'
+
+           }))
+           console.log('mn11---', imgArray);
+           const response = await FootballPitch.updateOne({
+                 $push:{
+                   pitchs:[
+                     {
+                       pitchName,
+                       code,
+                       openTime,
+                       closeTime,
+                       location,
+                       minPrice,
+                       maxPrice,
+                       image,
+                       title,
+                       content,
+                       imgArray,
+                       latitude,
+                       longitude 
+                     }
+                   ]
+                 }
+               })
+               return  res.status(200).json({message:'success', image:image.image})
+       } catch (err) {
+        console.error(err);
+        return res.status(400).json({err: err})
+       }
       }
     })
-
-    try {
-      const image='';
-    
-      //   const image= {
-      //     name: avataName,
-      //     data: file,
-      //     contentType: 'image/png'
-      //  }
-       console.log(image)
-       const response = await FootballPitch.updateOne({
-             $push:{
-               pitchs:[
-                 {
-                   pitchName,
-                   code,
-                   openTime,
-                   closeTime,
-                   location,
-                   minPrice,
-                   maxPrice,
-                   image,
-                   title,
-                   content,
-                   imgArray,
-                   latitude,
-                   longitude 
-                 }
-               ]
-             }
-           })
-           return  res.status(200).json({message:'success', image:image.image})
-   } catch (err) {
-    console.error(err);
-    return res.status(400).json({err: err})
-   }
-
-  // try{
-   
-  //   const a = await FootballPitch.create({
-  //      image:'1111'
-  //   })
-  //   return  res.status(200).json({message:'success', data: a})
-    // console.log('a1234')
-    // const data = fs.readFile('Images/',res.file.filename,  'utf8');
-    // console.log('ccc------', data);
-    // const image={
-    //   data: data,
-    //   contentType:'image/png'
-    // };
-  //  const response = await FootballPitch.updateOne({
-  //     $push:{
-  //       pitchs:[
-  //         {
-  //           pitchName,
-  //           code,
-  //           openTime,
-  //           closeTime,
-  //           location,
-  //           minPrice,
-  //           maxPrice,
-  //           image,
-  //           title,
-  //           content,
-  //           imgArray,
-  //           latitude,
-  //           longitude 
-  //         }
-  //       ]
-  //     }
-  //   })
-  //  return  res.status(200).json({message:'success'})
-  // }catch(error){
-  //   return res.json({'error' : error})
-  // }
- 
-
 });
 // get pitch football list
 app.get("/api/pitch-list",auth, async (req, res) => {
-  const id = "632190052ac9c5dcdf8f3370";
+  const id = "632a84ada56a701c8719c6e3";
   try {
     const data = await FootballPitch.findOne({ _id: id }).lean();
     res.json(data);
