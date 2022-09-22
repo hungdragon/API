@@ -182,12 +182,9 @@ app.get("/users/me", auth, async (req, res) => {
   console.log('----', req.user);
    res.send(req.user);
 });
-app.get("/demo", async (req, res) => {
- 
-  
+app.get("/", async (req, res) => {
   return res.status(200).json({
-    message: "Tên phải dài hơn",
-  });
+    message: "Tên phải dài hơn"});
 });
 
 app.post("/api/change-fullname",auth, async (req, res) => {
