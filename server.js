@@ -23,7 +23,7 @@ var moment = require("moment");
 var dates = require("date-fns");
 moment.locale("vi");
 const { boolean } = require("webidl-conversions");
-mongoose.connect("mongodb+srv://hungvv:Hanoi1999@cluster0.2wq4vod.mongodb.net/test", {
+mongoose.connect("mongodb+srv://hungvv:Hanoi1999@cluster0.2wq4vod.mongodb.net/?retryWrites=true&w=majority", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   //useCreateIndex: true
