@@ -49,8 +49,9 @@ app.post("/api/login", async (req, res) => {
 
   if (!user) {
     //return res.json({ status: 404, error: "Không tồn tại tài khoản !" });
-    return res.status(401).send({error: 'Không tồn tại tài khoản !'})
+    return res.status(401).send({error: 'Không tồn tại tài khoản !' + username})
     //return res.status(404).json({error:'khong ton tai tk'})
+    
   }
  
   if (await bcrypt.compare(password, user.password)) {
