@@ -22,8 +22,7 @@ var _ = require("lodash");
 var moment = require("moment");
 var dates = require("date-fns");
 moment.locale("vi");
-const { boolean } = require("webidl-conversions");
-mongoose.connect("mongodb+srv://hungvv:Hanoi1999@cluster0.2wq4vod.mongodb.net/?retryWrites=true&w=majority", {
+mongoose.connect("mongodb+srv://hung123:hung123@cluster0.rbmwn42.mongodb.net/?retryWrites=true&w=majority", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   //useCreateIndex: true
@@ -750,10 +749,9 @@ app.post("/football/create-bill",auth, async (req, res) => {
 });
 
 app.post("/football/customer-order",auth, async (req, res) => {
-  const username  = req.query.username;
-  console.log("user--", username);
+  const username  = req.body.username;
+  console.log("user--111", username);
   try {
-    dates;
     const data = await CustomerDetail.find({ username: username }).lean();
     // const dataFilter = _.filter(data, (o) => {
     //   const today = moment().format("DD/MM/YYYY HH");
