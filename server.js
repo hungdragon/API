@@ -162,7 +162,7 @@ app.post("/api/register", async (req, res) => {
     username: username,
   });
 });
-app.get("/users/me", auth, async (req, res) => {
+app.get("/user/me", auth, async (req, res) => {
   // View logged in user profile
   //console.log(req.createAt)
   //const data = jwt.verify(token, process.env.JWT_SECRET)
