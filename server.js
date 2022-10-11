@@ -42,7 +42,7 @@ app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
 app.use("/", express.static(path.join(__dirname, "static")));
 app.use(bodyParser.json());
 const keyrefshe= 'dasdasdasdasd'
-app.post("/api/login", async (req, res) => {
+app.post("/user/login", async (req, res) => {
   const { username, password } = req.body;
   console.log("user---" + username);
   const user = await User.findOne({ username }).lean();
