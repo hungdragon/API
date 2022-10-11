@@ -538,7 +538,7 @@ app.post("/football/add-pitch",auth, async (req, res) => {
 });
 // get pitch football list
 app.get("/api/pitch-list",auth, async (req, res) => {
-  const id = "632bd6e4ceeb1e843ac61326";
+  const id = "6345396dc5b9e280ac05879b";
   try {
     const data = await FootballPitch.findOne({ _id: id }).lean();
     res.json(data);
