@@ -502,7 +502,7 @@ app.post("/football/add-pitch",auth, async (req, res) => {
            }
            const imgArray =data.map(i=>({
               name: i.filename,
-              data: fs.readFileSync('/Users/macmini/Documents/API/Images/'+i.filename),
+              data: fs.readFileSync('/Volumes/ex1/Users/macmini/Documents/API/Images'+i.filename),
               contentType: 'image/png'
 
            }))
